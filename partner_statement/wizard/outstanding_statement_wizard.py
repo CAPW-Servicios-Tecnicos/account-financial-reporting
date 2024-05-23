@@ -11,6 +11,15 @@ class OutstandingStatementWizard(models.TransientModel):
     _inherit = "statement.common.wizard"
     _description = "Outstanding Statement Wizard"
 
+    def _prepare_statement(self):
+        res = super()._prepare_statement()
+        res.update(
+            {
+                "is_outstanding": True,
+            }
+        )
+        return res
+
     def _print_report(self, report_type):
         self.ensure_one()
         data = self._prepare_statement()
@@ -18,13 +27,14 @@ class OutstandingStatementWizard(models.TransientModel):
             report_name = "p_s.report_outstanding_statement_xlsx"
         else:
             report_name = "partner_statement.outstanding_statement"
+        partners = self.env["res.partner"].browse(self._context["active_ids"])
         return (
             self.env["ir.actions.report"]
             .search(
                 [("report_name", "=", report_name), ("report_type", "=", report_type)],
                 limit=1,
             )
-            .report_action(self, data=data)
+            .report_action(partners, data=data)
         )
 
     def _export(self, report_type):
