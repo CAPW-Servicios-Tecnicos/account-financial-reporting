@@ -22,108 +22,49 @@ class TrialBalanceXslx(models.AbstractModel):
         return report_name
 
     def _get_report_columns(self, report):
+        """Define columnas con soporte de moneda."""
         if not report.show_partner_details:
             res = {
                 0: {"header": _("Code"), "field": "code", "width": 10},
                 1: {"header": _("Account"), "field": "name", "width": 60},
-                2: {
-                    "header": _("Initial balance"),
-                    "field": "initial_balance",
-                    "type": "amount",
-                    "width": 14,
-                },
-                3: {
-                    "header": _("Debit"),
-                    "field": "debit",
-                    "type": "amount",
-                    "width": 14,
-                },
-                4: {
-                    "header": _("Credit"),
-                    "field": "credit",
-                    "type": "amount",
-                    "width": 14,
-                },
-                5: {
-                    "header": _("Period balance"),
-                    "field": "balance",
-                    "type": "amount",
-                    "width": 14,
-                },
-                6: {
-                    "header": _("Ending balance"),
-                    "field": "ending_balance",
-                    "type": "amount",
-                    "width": 14,
-                },
+                2: {"header": _("Initial balance"), "field": "initial_balance", "type": "amount", "width": 14},
+                3: {"header": _("Debit"), "field": "debit", "type": "amount", "width": 14},
+                4: {"header": _("Credit"), "field": "credit", "type": "amount", "width": 14},
+                5: {"header": _("Period balance"), "field": "balance", "type": "amount", "width": 14},
+                6: {"header": _("Ending balance"), "field": "ending_balance", "type": "amount", "width": 14},
             }
+
             if report.foreign_currency:
                 foreign_currency = {
-                    7: {
-                        "header": _("Initial balance"),
-                        "field": "initial_currency_balance",
-                        "type": "amount_currency",
-                        "width": 14,
-                    },
-                    8: {
-                        "header": _("Ending balance"),
-                        "field": "ending_currency_balance",
-                        "type": "amount_currency",
-                        "width": 14,
-                    },
+                    7: {"header": _("Moneda"), "field": "currency_id.symbol", "type": "string", "width": 7},
+                    8: {"header": _("Initial balance"), "field": "initial_currency_balance", "type": "amount_currency",
+                        "width": 14},
+                    9: {"header": _("Ending balance"), "field": "ending_currency_balance", "type": "amount_currency",
+                        "width": 14},
                 }
-                res = {**res, **foreign_currency}
+                res.update(foreign_currency)
             return res
+
         else:
             res = {
                 0: {"header": _("Partner"), "field": "name", "width": 70},
-                1: {
-                    "header": _("Initial balance"),
-                    "field": "initial_balance",
-                    "type": "amount",
-                    "width": 14,
-                },
-                2: {
-                    "header": _("Debit"),
-                    "field": "debit",
-                    "type": "amount",
-                    "width": 14,
-                },
-                3: {
-                    "header": _("Credit"),
-                    "field": "credit",
-                    "type": "amount",
-                    "width": 14,
-                },
-                4: {
-                    "header": _("Period balance"),
-                    "field": "balance",
-                    "type": "amount",
-                    "width": 14,
-                },
-                5: {
-                    "header": _("Ending balance"),
-                    "field": "ending_balance",
-                    "type": "amount",
-                    "width": 14,
-                },
+                1: {"header": _("Initial balance"), "field": "initial_balance", "type": "amount", "width": 14},
+                2: {"header": _("Debit"), "field": "debit", "type": "amount", "width": 14},
+                3: {"header": _("Credit"), "field": "credit", "type": "amount", "width": 14},
+                4: {"header": _("Period balance"), "field": "balance", "type": "amount", "width": 14},
+                5: {"header": _("Ending balance"), "field": "ending_balance", "type": "amount", "width": 14},
             }
+
             if report.foreign_currency:
                 foreign_currency = {
-                    6: {
-                        "header": _("Initial balance"),
-                        "field": "initial_currency_balance",
-                        "type": "amount_currency",
-                        "width": 14,
-                    },
-                    7: {
-                        "header": _("Ending balance"),
-                        "field": "ending_currency_balance",
-                        "type": "amount_currency",
-                        "width": 14,
-                    },
+                    6: {"header": _("Moneda"), "field": "currency_id.symbol", "type": "string", "width": 7},
+                    7: {"header": _("Initial balance"), "field": "initial_currency_balance", "type": "amount_currency",
+                        "width": 14},
+                    8: {"header": _("Ending balance"), "field": "ending_currency_balance", "type": "amount_currency",
+                        "width": 14},
+
                 }
-                res = {**res, **foreign_currency}
+                res.update(foreign_currency)
             return res
 
     def _get_report_filters(self, report):
@@ -162,9 +103,7 @@ class TrialBalanceXslx(models.AbstractModel):
         return 3
 
     def _generate_report_content(self, workbook, report, data, report_data):
-        res_data = self.env[
-            "report.account_financial_report.trial_balance"
-        ]._get_report_values(report, data)
+        res_data = self.env["report.account_financial_report.trial_balance"]._get_report_values(report, data)
         trial_balance = res_data["trial_balance"]
         trial_balance_grouped = res_data["trial_balance_grouped"]
         total_amount = res_data["total_amount"]
@@ -178,62 +117,49 @@ class TrialBalanceXslx(models.AbstractModel):
         limit_hierarchy_level = res_data["limit_hierarchy_level"]
         hide_parent_hierarchy_level = res_data["hide_parent_hierarchy_level"]
         grouped_by = res_data["grouped_by"]
+
         if not show_partner_details:
             if grouped_by:
-                # For each grouped
                 for grouped_item in trial_balance_grouped:
                     self.write_array_title(grouped_item["name"], report_data)
-                    # Display array header for account lines
                     self.write_array_header(report_data)
-                    # For each account
                     for balance in grouped_item["account_data"]:
+                        self._prepare_currency_symbol(balance)
                         self.write_line_from_dict(balance, report_data)
-                    # Footer with totals
                     grouped_item["code"] = ""
                     grouped_item["currency_id"] = False
                     self.write_account_footer(grouped_item, _("Total"), report_data)
                     report_data["row_pos"] += 1
-                # Last line with totals
                 total_amount_grouped["currency_id"] = False
                 total_amount_grouped["code"] = ""
                 self.write_account_footer(total_amount_grouped, _("TOTAL"), report_data)
             else:
-                # Display array header for account lines
                 self.write_array_header(report_data)
-                # For each account
                 for balance in trial_balance:
                     if show_hierarchy and limit_hierarchy_level:
                         if show_hierarchy_level > balance["level"] and (
-                            not hide_parent_hierarchy_level
-                            or (show_hierarchy_level - 1) == balance["level"]
+                                not hide_parent_hierarchy_level
+                                or (show_hierarchy_level - 1) == balance["level"]
                         ):
-                            # Display account lines
+                            self._prepare_currency_symbol(balance)
                             self.write_line_from_dict(balance, report_data)
                     else:
+                        self._prepare_currency_symbol(balance)
                         self.write_line_from_dict(balance, report_data)
         else:
             for account_id in total_amount:
-                # Write account title
                 self.write_array_title(
-                    accounts_data[account_id]["code"]
-                    + "- "
-                    + accounts_data[account_id]["name"],
+                    accounts_data[account_id]["code"] + "- " + accounts_data[account_id]["name"],
                     report_data,
                 )
-                # Display array header for partner lines
                 self.write_array_header(report_data)
-
-                # For each partner
                 for partner_id in total_amount[account_id]:
                     if isinstance(partner_id, int):
-                        # Display partner lines
                         self.write_line_from_dict_order(
                             total_amount[account_id][partner_id],
                             partners_data[partner_id],
                             report_data,
                         )
-
-                # Display account footer line
                 accounts_data[account_id].update(
                     {
                         "initial_balance": total_amount[account_id]["initial_balance"],
@@ -246,27 +172,31 @@ class TrialBalanceXslx(models.AbstractModel):
                 if foreign_currency:
                     accounts_data[account_id].update(
                         {
-                            "initial_currency_balance": total_amount[account_id][
-                                "initial_currency_balance"
-                            ],
-                            "ending_currency_balance": total_amount[account_id][
-                                "ending_currency_balance"
-                            ],
+                            "initial_currency_balance": total_amount[account_id]["initial_currency_balance"],
+                            "ending_currency_balance": total_amount[account_id]["ending_currency_balance"],
                         }
                     )
                 self.write_account_footer(
                     accounts_data[account_id],
-                    accounts_data[account_id]["code"]
-                    + "- "
-                    + accounts_data[account_id]["name"],
+                    accounts_data[account_id]["code"] + "- " + accounts_data[account_id]["name"],
                     report_data,
                 )
-
-                # Line break
                 report_data["row_pos"] += 2
 
+    def _prepare_currency_symbol(self, balance):
+        """Prepara currency_id.symbol para que no explote si es int."""
+        currency_id = balance.get("currency_id")
+        if isinstance(currency_id, int) and currency_id:
+            currency = self.env["res.currency"].browse(currency_id)
+            balance["currency_id.symbol"] = currency.symbol or ""
+        else:
+            balance["currency_id.symbol"] = ""
+
     def write_line_from_dict_order(self, total_amount, partner_data, report_data):
-        total_amount.update({"name": str(partner_data["name"])})
+        total_amount.update({
+            "name": str(partner_data["name"]),
+            "currency_id.symbol": total_amount.get("currency_id").symbol if total_amount.get("currency_id") else ""
+        })
         self.write_line_from_dict(total_amount, report_data)
 
     def write_line(self, line_object, type_object, report_data):
