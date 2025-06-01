@@ -4,179 +4,124 @@
         <t t-call="account_financial_report.html_container">
             <t t-foreach="docs" t-as="o">
                 <t t-call="account_financial_report.internal_layout">
-                    <t t-call="account_financial_report.report_trial_balance_base" />
+                    <t t-call="account_financial_report.report_trial_balance_base"/>
                 </t>
             </t>
         </t>
     </template>
     <template id="report_trial_balance_base">
-        <!-- Saved flag fields into variables, used to define columns display -->
-        <t t-set="show_partner_details" t-value="show_partner_details" />
-        <t t-set="foreign_currency" t-value="foreign_currency" />
-        <t t-set="show_hierarchy_level" t-value="show_hierarchy_level" />
-        <t t-set="limit_hierarchy_level" t-value="limit_hierarchy_level" />
-        <!-- Defines global variables used by internal layout -->
+        <t t-set="show_partner_details" t-value="show_partner_details"/>
+        <t t-set="foreign_currency" t-value="foreign_currency"/>
+        <t t-set="show_hierarchy_level" t-value="show_hierarchy_level"/>
+        <t t-set="limit_hierarchy_level" t-value="limit_hierarchy_level"/>
         <t t-set="title">
-            Trial Balance -
-            <t t-out="company_name" />
+            Balance de Sumas y Saldos -
+            <t t-out="company_name"/>
             -
-            <t t-out="currency_name" />
+            <t t-out="currency_name"/>
         </t>
-        <t t-set="company_name" t-value="Company_Name" />
-        <!--       <t t-set="res_company" t-value="company_id"/>-->
+        <t t-set="company_name" t-value="Company_Name"/>
+
         <t class="page">
             <div class="row">
-                <h4
-                    class="mt0"
-                    t-out="title or 'Odoo Report'"
-                    style="text-align: center;"
-                />
+                <h4 class="mt0" t-out="title or 'Odoo Report'"
+                    style="text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px;"/>
             </div>
+
             <!-- Display filters -->
-            <t t-call="account_financial_report.report_trial_balance_filters" />
-            <div class="act_as_table list_table" style="margin-top: 10px;" />
-            <!-- Display account lines -->
-            <t t-set="aml_domain_extra" t-value="[]" />
-            <t t-if="not show_partner_details">
-                <t t-if="trial_balance_grouped">
-                    <t t-foreach="trial_balance_grouped" t-as="grouped_item">
-                        <div class="act_as_table data_table" style="width: 100%;">
-                            <div class="act_as_thead">
-                                <div class="act_as_row labels">
-                                    <div class="act_as_cell" style="width: 100%;">
-                                        <t t-esc="grouped_item['name']" />
+            <t t-call="account_financial_report.report_trial_balance_filters"/>
+
+            <!-- Contenedor centrado -->
+            <div style="display: flex; justify-content: center; margin-top: 20px;">
+                <div class="act_as_table list_table" style="width: auto; border-collapse: collapse;">
+                    <t t-set="aml_domain_extra" t-value="[]"/>
+                    <t t-if="not show_partner_details">
+                        <t t-if="trial_balance_grouped">
+                            <t t-foreach="trial_balance_grouped" t-as="grouped_item">
+                                <div class="act_as_table data_table" style="width: auto; margin-bottom: 20px;">
+                                    <div class="act_as_thead" style="background-color: #f2f2f2;">
+                                        <div class="act_as_row labels" style="font-weight: bold; text-align: center;">
+                                            <div class="act_as_cell" style="width: 100%;">
+                                                <t t-esc="grouped_item['name']"/>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <t
-                            t-set="aml_domain_extra"
-                            t-if="grouped_item['id'] > 0"
-                            t-value="[('analytic_account_ids', '=', grouped_item['id'])]"
-                        />
-                        <t
-                            t-set="aml_domain_extra"
-                            t-else=""
-                            t-value="[('analytic_account_ids', '=', False)]"
-                        />
-                        <div class="act_as_table data_table" style="width: 100%;">
-                            <t
-                                t-call="account_financial_report.report_trial_balance_lines_header"
-                            />
-                            <!-- Display each lines -->
-                            <t t-foreach="grouped_item['account_data']" t-as="balance">
-                                <!-- Adapt -->
-                                <t t-set="style" t-value="'font-size:12px;'" />
-                                <t
-                                    t-call="account_financial_report.report_trial_balance_line"
-                                />
+                                <t t-set="aml_domain_extra"
+                                   t-if="grouped_item['id'] > 0"
+                                   t-value="[('analytic_account_ids', '=', grouped_item['id'])]"/>
+                                <t t-set="aml_domain_extra"
+                                   t-else=""
+                                   t-value="[('analytic_account_ids', '=', False)]"/>
+                                <div class="act_as_table data_table" style="width: auto;">
+                                    <t t-call="account_financial_report.report_trial_balance_lines_header"/>
+                                    <t t-foreach="grouped_item['account_data']" t-as="balance">
+                                        <t t-set="style" t-value="'font-size:12px;'"/>
+                                        <t t-call="account_financial_report.report_trial_balance_line"/>
+                                    </t>
+                                </div>
+                                <t t-set="balance" t-value="grouped_item"/>
+                                <t t-call="account_financial_report.report_trial_balance_account_footer"/>
                             </t>
-                        </div>
-                        <!-- Display footer with totals !-->
-                        <t t-set="balance" t-value="grouped_item" />
-                        <t
-                            t-call="account_financial_report.report_trial_balance_account_footer"
-                        />
-                    </t>
-                    <!-- TOTAL !-->
-                    <t t-if="grouped_by">
-                        <t t-set="balance" t-value="total_amount_grouped" />
-                        <t
-                            t-call="account_financial_report.report_trial_balance_account_footer"
-                        />
-                    </t>
-                </t>
-                <t t-else="">
-                    <div class="act_as_table data_table" style="width: 100%;">
-                        <!-- Display account header -->
-                        <t
-                            t-call="account_financial_report.report_trial_balance_lines_header"
-                        />
-                        <!-- Display each lines -->
-                        <t t-foreach="trial_balance" t-as="balance">
-                            <!-- Adapt -->
-                            <t t-set="style" t-value="'font-size:12px;'" />
-                            <!-- Different style for account group -->
-                            <t t-if="show_hierarchy">
-                                                        <t
-                                    t-if="balance['type'] == 'group_type'"
-                                >
-                                    <t
-                                        t-set="style"
-                                        t-value="style + 'font-weight: bold; color: blue;'"
-                                    />
-                                </t>
-                            </t>
-                            <t t-if="show_hierarchy and limit_hierarchy_level">
-                                <t
-                                    t-if="show_hierarchy_level > balance['level'] and (not hide_parent_hierarchy_level or (show_hierarchy_level - 1) == balance['level'])"
-                                >
-                                    <t
-                                        t-call="account_financial_report.report_trial_balance_line"
-                                    />
-                                </t>
-                            </t>
-                            <t t-else="">
-                                <t
-                                    t-call="account_financial_report.report_trial_balance_line"
-                                />
+                            <t t-if="grouped_by">
+                                <t t-set="balance" t-value="total_amount_grouped"/>
+                                <t t-call="account_financial_report.report_trial_balance_account_footer"/>
                             </t>
                         </t>
-                    </div>
-                </t>
-            </t>
-            <!-- Display partner lines -->
-            <t t-if="show_partner_details">
-                <t t-set="padding" t-value="0" />
-                <t t-foreach="total_amount.keys()" t-as="account_id">
-                    <div class="page_break">
-                        <t t-set="style" t-value="'font-size:12px;'" />
-                        <!-- Display account header -->
-                        <div
-                            class="act_as_table list_table"
-                            style="margin-top: 10px;"
-                        />
-                        <div class="act_as_caption account_title" style="width: 100%;">
-                            <span
-                                t-att-res-id="account_id"
-                                res-model="account.account"
-                                view-type="form"
-                            >
-                                        <t
-                                    t-out="accounts_data[account_id]['code']"
-                                /> - <t t-out="accounts_data[account_id]['name']" />
-                            </span>
-                        </div>
-                        <div class="act_as_table data_table" style="width: 100%;">
-                            <!-- Display account/partner header -->
-                            <t
-                                t-call="account_financial_report.report_trial_balance_lines_header"
-                            />
-                            <!-- Adapt style -->
-                            <t t-set="padding" t-value="padding+4" />
-                            <!-- Display each partners -->
-                            <t
-                                t-foreach="total_amount[account_id].keys()"
-                                t-as="partner_id"
-                            >
-                                <t t-if="isinstance(partner_id, int)">
-                                    <t t-set="type" t-value='"partner_type"' />
-                                    <!-- Display partner line -->
-                                    <t
-                                        t-call="account_financial_report.report_trial_balance_line"
-                                    />
+                        <t t-else="">
+                            <div class="act_as_table data_table" style="width: auto;">
+                                <t t-call="account_financial_report.report_trial_balance_lines_header"/>
+                                <t t-foreach="trial_balance" t-as="balance">
+                                    <t t-set="style" t-value="'font-size:12px;'"/>
+                                    <t t-if="show_hierarchy">
+                                        <t t-if="balance['type'] == 'group_type'">
+                                            <t t-set="style" t-value="style + 'font-weight: bold; color: #003366;'"/>
+                                        </t>
+                                    </t>
+                                    <t t-if="show_hierarchy and limit_hierarchy_level">
+                                        <t t-if="show_hierarchy_level > balance['level'] and (not hide_parent_hierarchy_level or (show_hierarchy_level - 1) == balance['level'])">
+                                            <t t-call="account_financial_report.report_trial_balance_line"/>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <t t-call="account_financial_report.report_trial_balance_line"/>
+                                    </t>
                                 </t>
-                            </t>
-                            <t t-set="padding" t-value="padding-4" />
-                        </div>
-                        <!-- Display account footer -->
-                        <t t-set="type" t-value='"account_type"' />
-                        <t
-                            t-call="account_financial_report.report_trial_balance_account_footer"
-                        />
-                    </div>
-                </t>
-            </t>
+                            </div>
+                        </t>
+                    </t>
+
+                    <t t-if="show_partner_details">
+                        <t t-set="padding" t-value="0"/>
+                        <t t-foreach="total_amount.keys()" t-as="account_id">
+                            <div class="page_break" style="margin-bottom: 20px;">
+                                <t t-set="style" t-value="'font-size:12px;'"/>
+                                <div class="act_as_caption account_title"
+                                     style="width: auto; font-weight: bold; text-align: center; margin-bottom: 10px; font-size: 16px;">
+                                    <span t-att-res-id="account_id" res-model="account.account" view-type="form">
+                                        <t t-out="accounts_data[account_id]['code']"/>
+                                        -
+                                        <t t-out="accounts_data[account_id]['name']"/>
+                                    </span>
+                                </div>
+                                <div class="act_as_table data_table" style="width: auto;">
+                                    <t t-call="account_financial_report.report_trial_balance_lines_header"/>
+                                    <t t-set="padding" t-value="padding+4"/>
+                                    <t t-foreach="total_amount[account_id].keys()" t-as="partner_id">
+                                        <t t-if="isinstance(partner_id, int)">
+                                            <t t-set="type" t-value='"partner_type"'/>
+                                            <t t-call="account_financial_report.report_trial_balance_line"/>
+                                        </t>
+                                    </t>
+                                    <t t-set="padding" t-value="padding-4"/>
+                                </div>
+                                <t t-set="type" t-value='"account_type"'/>
+                                <t t-call="account_financial_report.report_trial_balance_account_footer"/>
+                            </div>
+                        </t>
+                    </t>
+                </div>
+            </div>
         </t>
     </template>
     <template id="account_financial_report.report_trial_balance_filters">
@@ -190,9 +135,9 @@
             <div class="act_as_row">
                 <div class="act_as_cell">
                     From:
-                    <span t-out="date_from" t-options="{'widget': 'date'}" />
+                    <span t-out="date_from" t-options="{'widget': 'date'}"/>
                     To
-                    <span t-out="date_to" t-options="{'widget': 'date'}" />
+                    <span t-out="date_to" t-options="{'widget': 'date'}"/>
                 </div>
                 <div class="act_as_cell">
                     <t t-if="only_posted_moves">All posted entries</t>
@@ -205,7 +150,7 @@
                 <div class="act_as_cell">
                     <t t-if="limit_hierarchy_level">
                         Level
-                        <span t-out="show_hierarchy_level" />
+                        <span t-out="show_hierarchy_level"/>
                     </t>
                     <t t-if="not limit_hierarchy_level">No limit</t>
                 </div>
@@ -213,7 +158,6 @@
         </div>
     </template>
     <template id="account_financial_report.report_trial_balance_lines_header">
-        <!-- Display table headers for lines -->
         <div class="act_as_thead">
             <div class="act_as_row labels">
                 <t t-if="not show_partner_details">
@@ -221,44 +165,36 @@
                     <div class="act_as_cell" style="width: 8%;">Code</div>
                     <!--## Account-->
                     <div class="act_as_cell" style="width: 25%;">Account</div>
+                    <!--## Moneda nueva columna-->
+                    <t t-if="foreign_currency">
+                        <div class="act_as_cell" style="width: 6%;">Moneda</div>
+                    </t>
                 </t>
                 <t t-if="show_partner_details">
-                    <!--## Partner-->
                     <div class="act_as_cell" style="width: 33%;">Partner</div>
                 </t>
-                <!--## Initial balance-->
-                <div class="act_as_cell" style="width: 9%;">
-                    Initial
-                    balance
-                </div>
-                <!--## Debit-->
+                <div class="act_as_cell" style="width: 9%;">Initial balance</div>
                 <div class="act_as_cell" style="width: 9%;">Debit</div>
-                <!--## Credit-->
                 <div class="act_as_cell" style="width: 9%;">Credit</div>
-                <!--## Period balance-->
                 <div class="act_as_cell" style="width: 9%;">Period balance</div>
-                <!--## Ending balance-->
                 <div class="act_as_cell" style="width: 9%;">Ending balance</div>
                 <t t-if="foreign_currency">
-                    <!--## amount_currency-->
-                    <div class="act_as_cell" style="width: 11%;">Initial
-                        balance cur.</div>
-                    <div class="act_as_cell" style="width: 11%;">Ending balance
-                        cur.</div>
+                    <div class="act_as_cell" style="width: 11%;">Initial balance cur.</div>
+                    <div class="act_as_cell" style="width: 11%;">Ending balance cur.</div>
                 </t>
             </div>
         </div>
     </template>
     <template id="account_financial_report.report_trial_balance_line">
         <t
-            t-set="aml_domain_common"
-            t-if="only_posted_moves"
-            t-value="[('parent_state', '=', 'posted')]"
+                t-set="aml_domain_common"
+                t-if="only_posted_moves"
+                t-value="[('parent_state', '=', 'posted')]"
         />
         <t
-            t-set="aml_domain_common"
-            t-else=""
-            t-value="[('parent_state', 'in', ('posted', 'draft'))]"
+                t-set="aml_domain_common"
+                t-else=""
+                t-value="[('parent_state', 'in', ('posted', 'draft'))]"
         />
         <!-- # line -->
         <div class="act_as_row lines">
@@ -267,56 +203,65 @@
                 <t t-if="balance['type'] == 'account_type'">
                     <div class="act_as_cell left" t-att-style="style">
                         <span
-                            t-att-res-id="balance['id']"
-                            res-model="account.account"
-                            view-type="form"
+                                t-att-res-id="balance['id']"
+                                res-model="account.account"
+                                view-type="form"
                         >
-                            <t t-out="balance['code']" />
+                            <t t-out="balance['code']"/>
                         </span>
                     </div>
                     <!--            ## Account/Partner-->
                     <div class="act_as_cell left" t-att-style="style">
                         <span
-                            t-att-res-id="balance['id']"
-                            res-model="account.account"
-                            view-type="form"
+                                t-att-res-id="balance['id']"
+                                res-model="account.account"
+                                view-type="form"
                         >
-                            <t t-out="balance['name']" />
+                            <t t-out="balance['name']"/>
                         </span>
                     </div>
+
                 </t>
                 <t t-if="balance['type'] == 'group_type'">
                     <div class="act_as_cell left" t-att-style="style">
-                        <t t-set="res_model" t-value="'account.group'" />
+                        <t t-set="res_model" t-value="'account.group'"/>
                         <span
-                            t-att-res-id="balance['id']"
-                            res-model="account.group"
-                            view-type="form"
+                                t-att-res-id="balance['id']"
+                                res-model="account.group"
+                                view-type="form"
                         >
-                            <t t-out="balance['code']" />
+                            <t t-out="balance['code']"/>
                         </span>
                     </div>
                     <div class="act_as_cell left" t-att-style="style">
-                        <t t-set="res_model" t-value="'account.group'" />
+                        <t t-set="res_model" t-value="'account.group'"/>
                         <span
-                            t-att-res-id="balance['id']"
-                            res-model="account.group"
-                            view-type="form"
+                                t-att-res-id="balance['id']"
+                                res-model="account.group"
+                                view-type="form"
                         >
-                            <t t-out="balance['name']" />
+                            <t t-out="balance['name']"/>
                         </span>
+                    </div>
+                </t>
+                <t t-if="foreign_currency">
+                    <div class="act_as_cell left" t-att-style="style">
+                        <t t-if="balance.get('currency_id')">
+                            <t t-set="balance_currency" t-value="currency_model.browse(balance['currency_id'])"/>
+                            <t t-out="balance_currency.name"/>
+                        </t>
                     </div>
                 </t>
             </t>
             <t t-if="show_partner_details">
                 <div class="act_as_cell left" t-att-style="style">
-                    <t t-set="res_model" t-value="'res.partner'" />
+                    <t t-set="res_model" t-value="'res.partner'"/>
                     <span
-                        t-att-res-id="partner_id"
-                        res-model="res.partner"
-                        view-type="form"
+                            t-att-res-id="partner_id"
+                            res-model="res.partner"
+                            view-type="form"
                     >
-                        <t t-out="partners_data[partner_id]['name']" />
+                        <t t-out="partners_data[partner_id]['name']"/>
                     </span>
                 </div>
             </t>
@@ -325,51 +270,51 @@
                 <t t-if="not show_partner_details">
                     <t t-if="balance['type'] == 'account_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', '=', balance['id']),
+                                t-set="domain"
+                                t-value="[('account_id', '=', balance['id']),
                                ('date', '&lt;', date_from)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common+aml_domain_extra"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common+aml_domain_extra"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['initial_balance']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['initial_balance']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                     <t t-if="balance['type'] == 'group_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', 'in', balance['account_ids']),
+                                t-set="domain"
+                                t-value="[('account_id', 'in', balance['account_ids']),
                                     ('date', '&lt;', date_from)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['initial_balance']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['initial_balance']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                 </t>
                 <t t-if="type == 'partner_type'">
                     <t
-                        t-set="domain"
-                        t-value="[('account_id', '=', int(account_id)),
+                            t-set="domain"
+                            t-value="[('account_id', '=', int(account_id)),
                                  ('partner_id', '=', int(partner_id)),
                                  ('date', '&lt;', date_from)]"
                     />
                     <span
-                        t-att-domain="domain+aml_domain_common"
-                        res-model="account.move.line"
+                            t-att-domain="domain+aml_domain_common"
+                            res-model="account.move.line"
                     >
                         <t
-                            t-out="total_amount[account_id][partner_id]['initial_balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id][partner_id]['initial_balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </span>
                 </t>
@@ -379,57 +324,57 @@
                 <t t-if="not show_partner_details">
                     <t t-if="balance['type'] == 'account_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', '=', balance['id']),
+                                t-set="domain"
+                                t-value="[('account_id', '=', balance['id']),
                                          ('date', '&gt;=', date_from),
                                          ('date', '&lt;=', date_to),
                                          ('debit', '&lt;&gt;', 0)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common+aml_domain_extra"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common+aml_domain_extra"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['debit']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['debit']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                     <t t-if="balance['type'] == 'group_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', 'in', balance['account_ids']),
+                                t-set="domain"
+                                t-value="[('account_id', 'in', balance['account_ids']),
                                     ('date', '&gt;=', date_from),
                                     ('date', '&lt;=', date_to),
                                     ('debit', '&lt;&gt;', 0)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['debit']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['debit']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                 </t>
                 <t t-if="type == 'partner_type'">
                     <t
-                        t-set="domain"
-                        t-value="[('account_id', '=', int(account_id)),
+                            t-set="domain"
+                            t-value="[('account_id', '=', int(account_id)),
                                  ('partner_id', '=', int(partner_id)),
                                  ('date', '&gt;=', date_from),
                                  ('date', '&lt;=', date_to),
                                  ('debit', '&lt;&gt;', 0)]"
                     />
                     <span
-                        t-att-domain="domain+aml_domain_common"
-                        res-model="account.move.line"
+                            t-att-domain="domain+aml_domain_common"
+                            res-model="account.move.line"
                     >
                         <t
-                            t-out="total_amount[account_id][partner_id]['debit']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id][partner_id]['debit']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </span>
                 </t>
@@ -439,57 +384,57 @@
                 <t t-if="not show_partner_details">
                     <t t-if="balance['type'] == 'account_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', '=', balance['id']),
+                                t-set="domain"
+                                t-value="[('account_id', '=', balance['id']),
                                          ('date', '&gt;=', date_from),
                                          ('date', '&lt;=', date_to),
                                          ('credit', '&lt;&gt;', 0)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common+aml_domain_extra"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common+aml_domain_extra"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['credit']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['credit']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                     <t t-if="balance['type'] == 'group_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', 'in', balance['account_ids']),
+                                t-set="domain"
+                                t-value="[('account_id', 'in', balance['account_ids']),
                                     ('date', '&gt;=', date_from),
                                     ('date', '&lt;=', date_to),
                                     ('credit', '&lt;&gt;', 0)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['credit']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['credit']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                 </t>
                 <t t-if="type == 'partner_type'">
                     <t
-                        t-set="domain"
-                        t-value="[('account_id', '=', int(account_id)),
+                            t-set="domain"
+                            t-value="[('account_id', '=', int(account_id)),
                                  ('partner_id', '=', int(partner_id)),
                                  ('date', '&gt;=', date_from),
                                  ('date', '&lt;=', date_to),
                                  ('credit', '&lt;&gt;', 0)]"
                     />
                     <span
-                        t-att-domain="domain+aml_domain_common"
-                        res-model="account.move.line"
+                            t-att-domain="domain+aml_domain_common"
+                            res-model="account.move.line"
                     >
                         <t
-                            t-out="total_amount[account_id][partner_id]['credit']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id][partner_id]['credit']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </span>
                 </t>
@@ -499,56 +444,56 @@
                 <t t-if="not show_partner_details">
                     <t t-if="balance['type'] == 'account_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', '=', balance['id']),
+                                t-set="domain"
+                                t-value="[('account_id', '=', balance['id']),
                                     ('date', '&gt;=', date_from),
                                     ('date', '&lt;=', date_to),
                                     ('balance', '&lt;&gt;', 0)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common+aml_domain_extra"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common+aml_domain_extra"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['balance']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['balance']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                     <t t-if="balance['type'] == 'group_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', 'in', balance['account_ids']),
+                                t-set="domain"
+                                t-value="[('account_id', 'in', balance['account_ids']),
                                     ('date', '&gt;=', date_from),
                                     ('date', '&lt;=', date_to)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['balance']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['balance']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                 </t>
                 <t t-if="type == 'partner_type'">
                     <t
-                        t-set="domain"
-                        t-value="[('account_id', '=', int(account_id)),
+                            t-set="domain"
+                            t-value="[('account_id', '=', int(account_id)),
                                  ('partner_id', '=', int(partner_id)),
                                  ('date', '&gt;=', date_from),
                                  ('date', '&lt;=', date_to),
                                  ('balance', '&lt;&gt;', 0)]"
                     />
                     <span
-                        t-att-domain="domain+aml_domain_common"
-                        res-model="account.move.line"
+                            t-att-domain="domain+aml_domain_common"
+                            res-model="account.move.line"
                     >
                         <t
-                            t-out="total_amount[account_id][partner_id]['balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id][partner_id]['balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </span>
                 </t>
@@ -558,50 +503,50 @@
                 <t t-if="not show_partner_details">
                     <t t-if="balance['type'] == 'account_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', '=', balance['id']),
+                                t-set="domain"
+                                t-value="[('account_id', '=', balance['id']),
                                          ('date', '&lt;=', date_to)]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common+aml_domain_extra"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common+aml_domain_extra"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['ending_balance']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['ending_balance']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                     <t t-if="balance['type'] == 'group_type'">
                         <t
-                            t-set="domain"
-                            t-value="[('account_id', 'in', balance['account_ids'])]"
+                                t-set="domain"
+                                t-value="[('account_id', 'in', balance['account_ids'])]"
                         />
                         <span
-                            t-att-domain="domain+aml_domain_common"
-                            res-model="account.move.line"
+                                t-att-domain="domain+aml_domain_common"
+                                res-model="account.move.line"
                         >
                             <t
-                                t-out="balance['ending_balance']"
-                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                    t-out="balance['ending_balance']"
+                                    t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                             />
                         </span>
                     </t>
                 </t>
                 <t t-if="type == 'partner_type'">
                     <t
-                        t-set="domain"
-                        t-value="[('account_id', '=', int(account_id)),
+                            t-set="domain"
+                            t-value="[('account_id', '=', int(account_id)),
                                  ('partner_id', '=', int(partner_id)),
                                  ('date', '&lt;=', date_to)]"
                     />
                     <span
-                        t-att-domain="domain+aml_domain_common"
-                        res-model="account.move.line"
+                            t-att-domain="domain+aml_domain_common"
+                            res-model="account.move.line"
                     >
                         <t
-                            t-out="total_amount[account_id][partner_id]['ending_balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id][partner_id]['ending_balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </span>
                 </t>
@@ -611,22 +556,22 @@
                     <t t-if="balance['type'] == 'account_type'">
                         <t t-if="balance['currency_id']">
                             <t
-                                t-set="balance_currency"
-                                t-value="currency_model.browse(balance['currency_id'])"
+                                    t-set="balance_currency"
+                                    t-value="currency_model.browse(balance['currency_id'])"
                             />
                             <!--## Initial balance cur.-->
                             <div class="act_as_cell amount" t-att-style="style">
                                 <t
-                                    t-set="domain"
-                                    t-value="[('account_id', '=', balance['id'])]"
+                                        t-set="domain"
+                                        t-value="[('account_id', '=', balance['id'])]"
                                 />
                                 <span
-                                    t-att-domain="domain+aml_domain_common+aml_domain_extra"
-                                    res-model="account.move.line"
+                                        t-att-domain="domain+aml_domain_common+aml_domain_extra"
+                                        res-model="account.move.line"
                                 >
                                     <t
-                                        t-out="balance['initial_currency_balance']"
-                                        t-options="{'widget': 'monetary', 'display_currency': balance_currency}"
+                                            t-out="balance['initial_currency_balance']"
+                                            t-options="{'widget': 'monetary', 'display_currency': balance_currency}"
                                     />
                                 </span>
                                 <!--                            <t t-if="line.account_group_id">-->
@@ -649,21 +594,21 @@
                         <t t-if="type == 'partner_type'">
                             <div class="act_as_cell amount" t-att-style="style">
                                 <t
-                                    t-set="domain"
-                                    t-value="[('account_id', '=', account_id),
+                                        t-set="domain"
+                                        t-value="[('account_id', '=', account_id),
                                             ('partner_id', '=', partner_id)]"
                                 />
                                 <span
-                                    t-att-domain="domain+aml_domain_common"
-                                    res-model="account.move.line"
+                                        t-att-domain="domain+aml_domain_common"
+                                        res-model="account.move.line"
                                 >
                                     <t
-                                        t-set="total_amount_item_currency"
-                                        t-value="currency_model.browse(total_amount[account_id]['currency_id'])"
+                                            t-set="total_amount_item_currency"
+                                            t-value="currency_model.browse(total_amount[account_id]['currency_id'])"
                                     />
                                     <t
-                                        t-out="total_amount[account_id][partner_id]['initial_currency_balance']"
-                                        t-options="{'widget': 'monetary', 'display_currency': total_amount_item_currency}"
+                                            t-out="total_amount[account_id][partner_id]['initial_currency_balance']"
+                                            t-options="{'widget': 'monetary', 'display_currency': total_amount_item_currency}"
                                     />
                                 </span>
                             </div>
@@ -676,16 +621,16 @@
                         <t t-if="balance['currency_id']">
                             <div class="act_as_cell amount" t-att-style="style">
                                 <t
-                                    t-set="domain"
-                                    t-value="[('account_id', '=', balance['id'])]"
+                                        t-set="domain"
+                                        t-value="[('account_id', '=', balance['id'])]"
                                 />
                                 <span
-                                    t-att-domain="domain+aml_domain_common+aml_domain_extra"
-                                    res-model="account.move.line"
+                                        t-att-domain="domain+aml_domain_common+aml_domain_extra"
+                                        res-model="account.move.line"
                                 >
                                     <t
-                                        t-out="balance['ending_currency_balance']"
-                                        t-options="{'widget': 'monetary', 'display_currency': balance_currency}"
+                                            t-out="balance['ending_currency_balance']"
+                                            t-options="{'widget': 'monetary', 'display_currency': balance_currency}"
                                     />
                                 </span>
                                 <!--                            <t t-if="line.account_group_id">-->
@@ -708,21 +653,21 @@
                         <div class="act_as_cell amount" t-att-style="style">
                             <t t-if="type == 'partner_type'">
                                 <t
-                                    t-set="domain"
-                                    t-value="[('account_id', '=', account_id),
+                                        t-set="domain"
+                                        t-value="[('account_id', '=', account_id),
                                             ('partner_id', '=', partner_id)]"
                                 />
                                 <span
-                                    t-att-domain="domain+aml_domain_common"
-                                    res-model="account.move.line"
+                                        t-att-domain="domain+aml_domain_common"
+                                        res-model="account.move.line"
                                 >
                                     <t
-                                        t-set="total_amount_item_currency"
-                                        t-value="currency_model.browse(total_amount[account_id]['currency_id'])"
+                                            t-set="total_amount_item_currency"
+                                            t-value="currency_model.browse(total_amount[account_id]['currency_id'])"
                                     />
                                     <t
-                                        t-out="total_amount[account_id][partner_id]['ending_currency_balance']"
-                                        t-options="{'widget': 'monetary', 'display_currency': total_amount_item_currency}"
+                                            t-out="total_amount[account_id][partner_id]['ending_currency_balance']"
+                                            t-options="{'widget': 'monetary', 'display_currency': total_amount_item_currency}"
                                     />
                                 </span>
                             </t>
@@ -732,22 +677,22 @@
                 <t t-if="show_partner_details">
                     <t t-if="not total_amount[account_id]['currency_id']">
                         <!--## balance_currency-->
-                        <div class="act_as_cell" />
-                        <div class="act_as_cell" />
+                        <div class="act_as_cell"/>
+                        <div class="act_as_cell"/>
                     </t>
                 </t>
                 <t t-if="not show_partner_details">
                     <t t-if="balance['type'] == 'account_type'">
                         <t t-if="not balance['currency_id']">
                             <!--## balance_currency-->
-                            <div class="act_as_cell" />
-                            <div class="act_as_cell" />
+                            <div class="act_as_cell"/>
+                            <div class="act_as_cell"/>
                         </t>
                     </t>
                     <t t-if="balance['type'] == 'group_type'">
                         <!--## balance_currency-->
-                        <div class="act_as_cell" />
-                        <div class="act_as_cell" />
+                        <div class="act_as_cell"/>
+                        <div class="act_as_cell"/>
                     </t>
                 </t>
             </t>
@@ -887,106 +832,106 @@
                 <!--## date-->
                 <div class="act_as_cell first_column" style="width: 33%;">
                     <t
-                        t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
+                            t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
                     >
-                        <span t-out="balance['name']" />
+                        <span t-out="balance['name']"/>
                     </t>
                     <t t-else="">
-                        <span t-out="accounts_data[account_id]['code']" />
+                        <span t-out="accounts_data[account_id]['code']"/>
                         -
-                        <span t-out="accounts_data[account_id]['name']" />
+                        <span t-out="accounts_data[account_id]['name']"/>
                     </t>
                 </div>
                 <!--## Initial Balance-->
                 <div class="act_as_cell amount" style="width: 9%;">
                     <t
-                        t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
+                            t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
                     >
                         <span
-                            t-out="balance['initial_balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="balance['initial_balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                     <t t-else="">
                         <span
-                            t-out="total_amount[account_id]['initial_balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id]['initial_balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                 </div>
                 <!--## Debit-->
                 <div class="act_as_cell amount" style="width: 9%;">
                     <t
-                        t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
+                            t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
                     >
                         <span
-                            t-out="balance['debit']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="balance['debit']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                     <t t-else="">
                         <span
-                            t-out="total_amount[account_id]['debit']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id]['debit']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                 </div>
                 <!--## Credit-->
                 <div class="act_as_cell amount" style="width: 9%;">
                     <t
-                        t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
+                            t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
                     >
                         <span
-                            t-out="balance['credit']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="balance['credit']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                     <t t-else="">
                         <span
-                            t-out="total_amount[account_id]['credit']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id]['credit']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                 </div>
                 <!--## Period balance-->
                 <div class="act_as_cell amount" style="width: 9%;">
                     <t
-                        t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
+                            t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
                     >
                         <span
-                            t-out="balance['balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="balance['balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                     <t t-else="">
                         <span
-                            t-out="total_amount[account_id]['balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id]['balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                 </div>
                 <!--## Ending balance-->
                 <div class="act_as_cell amount" style="width: 9%;">
                     <t
-                        t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
+                            t-if="grouped_by and balance['type'] in ('analytic_account_type', 'total')"
                     >
                         <span
-                            t-out="balance['ending_balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="balance['ending_balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                     <t t-else="">
                         <span
-                            t-out="total_amount[account_id]['ending_balance']"
-                            t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
+                                t-out="total_amount[account_id]['ending_balance']"
+                                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"
                         />
                     </t>
                 </div>
                 <t t-if="foreign_currency">
                     <!--## amount_total_due_currency-->
-                    <div class="act_as_cell" style="width: 11%;" />
+                    <div class="act_as_cell" style="width: 11%;"/>
                     <!--## amount_residual_currency-->
-                    <div class="act_as_cell" style="width: 11%;" />
+                    <div class="act_as_cell" style="width: 11%;"/>
                 </t>
             </div>
         </div>
