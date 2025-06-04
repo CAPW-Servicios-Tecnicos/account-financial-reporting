@@ -212,11 +212,13 @@ class TrialBalanceXslx(models.AbstractModel):
     def write_account_footer(self, account, name_value, report_data):
         """Specific function to write account footer for Trial Balance"""
         format_amt = self._get_currency_amt_header_format_dict(account, report_data)
+        # PREPARA CURRENCY SYMBOL AQUÍ
+        self._prepare_currency_symbol(account)
         for col_pos, column in report_data["columns"].items():
             if column["field"] == "name":
                 value = name_value
             else:
-                value = account[column["field"]]
+                value = account.get(column["field"], "")  # <-- en vez de account[column["field"]]
             cell_type = column.get("type", "string")
             if cell_type == "string":
                 report_data["sheet"].write_string(
@@ -232,14 +234,14 @@ class TrialBalanceXslx(models.AbstractModel):
                     float(value),
                     report_data["formats"]["format_header_amount"],
                 )
-            elif cell_type == "many2one" and account["currency_id"]:
+            elif cell_type == "many2one" and account.get("currency_id"):
                 report_data["sheet"].write_string(
                     report_data["row_pos"],
                     col_pos,
                     value.name or "",
                     report_data["formats"]["format_header_right"],
                 )
-            elif cell_type == "amount_currency" and account["currency_id"]:
+            elif cell_type == "amount_currency" and account.get("currency_id"):
                 report_data["sheet"].write_number(
                     report_data["row_pos"], col_pos, float(value), format_amt
                 )
