@@ -20,12 +20,13 @@ class AgedPartnerBalanceReport(models.AbstractModel):
 
     @api.model
     def _get_move_lines_domain_not_reconciled(
-        self, company_id, account_ids, partner_ids, only_posted_moves, date_from
+        self, company_id, account_ids, partner_ids, only_posted_moves, date_from, currency_id=None
     ):
         domain = [
             ("account_id", "in", account_ids),
             ("company_id", "=", company_id),
             ("reconciled", "=", False),
+            ("currency_id", "=", currency_id),
         ]
         if partner_ids:
             domain += [("partner_id", "in", partner_ids)]

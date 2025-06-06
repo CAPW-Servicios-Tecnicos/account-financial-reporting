@@ -153,10 +153,13 @@ class AgedPartnerBalanceReport(models.AbstractModel):
         date_from,
         only_posted_moves,
         show_move_line_details,
+        currency_id=None,
     ):
         domain = self._get_move_lines_domain_not_reconciled(
-            company_id, account_ids, partner_ids, only_posted_moves, date_from
+            company_id, account_ids, partner_ids, only_posted_moves, date_from, currency_id
         )
+        if currency_id:
+            domain.append(('currency_id', '=', currency_id))
         ml_fields = self._get_ml_fields()
         line_model = self.env["account.move.line"]
         move_lines = line_model.search_read(domain=domain, fields=ml_fields)
@@ -239,15 +242,18 @@ class AgedPartnerBalanceReport(models.AbstractModel):
                         "partner": prt_name,
                         "ref_label": ref_label,
                         "due_date": move_line["date_maturity"],
-                        "residual": move_line["amount_residual"],
+                        "residual": (move_line["amount_residual_currency"] if move_line["currency_id"] else move_line["amount_residual"]) or 0.0,
                     }
                 )
                 ag_pb_data[acc_id][prt_id]["move_lines"].append(move_line_data)
+            residual = (
+                move_line["amount_residual_currency"] if move_line["currency_id"] else move_line["amount_residual"]
+            )
             ag_pb_data = self._calculate_amounts(
                 ag_pb_data,
                 acc_id,
                 prt_id,
-                move_line["amount_residual"],
+                residual,
                 move_line["date_maturity"],
                 date_at_object,
             )
@@ -423,6 +429,7 @@ class AgedPartnerBalanceReport(models.AbstractModel):
         date_from = data["date_from"]
         only_posted_moves = data["only_posted_moves"]
         show_move_line_details = data["show_move_line_details"]
+        currency_id = data.get("currency_id")  # <-- AQUI IMPORTANTE
         aged_partner_configuration = self.env[
             "account.age.report.configuration"
         ].browse(data["age_partner_config_id"])
@@ -441,6 +448,7 @@ class AgedPartnerBalanceReport(models.AbstractModel):
             date_from,
             only_posted_moves,
             show_move_line_details,
+            currency_id,  # <-- AQUI IMPORTANTE
         )
         aged_partner_data = self.with_context(
             age_partner_config=aged_partner_configuration
@@ -466,11 +474,14 @@ class AgedPartnerBalanceReport(models.AbstractModel):
             "aged_partner_balance": aged_partner_data,
             "show_move_lines_details": show_move_line_details,
             "age_partner_config": aged_partner_configuration,
+            "currency_id": currency_id,  # <-- También lo devuelvo por si el template quiere usarlo
         }
 
     def _get_ml_fields(self):
         return self.COMMON_ML_FIELDS + [
             "amount_residual",
+            "amount_residual_currency",
             "reconciled",
             "date_maturity",
+            "currency_id",
         ]

@@ -193,15 +193,14 @@ class AgedPartnerBalanceXslx(models.AbstractModel):
         return self._get_report_columns_with_move_line_details(report, column_index=9)
 
     def _get_report_filters(self, report):
-        return [
+        filters = [
             [_("Date at filter"), report.date_at.strftime("%d/%m/%Y")],
-            [
-                _("Target moves filter"),
-                _("All posted entries")
-                if report.target_move == "posted"
-                else _("All entries"),
-            ],
+            [_("Target moves filter"), _("All posted entries") if report.target_move == "posted" else _("All entries")],
         ]
+        if report.currency_id:
+            currency = self.env['res.currency'].browse(report.currency_id.id)
+            filters.append([_("Currency"), currency.name])
+        return filters
 
     def _get_col_count_filter_name(self):
         return 2
