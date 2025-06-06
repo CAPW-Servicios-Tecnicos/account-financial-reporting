@@ -22,50 +22,41 @@ class TrialBalanceXslx(models.AbstractModel):
         return report_name
 
     def _get_report_columns(self, report):
-        """Define columnas con soporte de moneda."""
+        columns = []
         if not report.show_partner_details:
-            res = {
-                0: {"header": _("Code"), "field": "code", "width": 10},
-                1: {"header": _("Account"), "field": "name", "width": 60},
-                2: {"header": _("Initial balance"), "field": "initial_balance", "type": "amount", "width": 14},
-                3: {"header": _("Debit"), "field": "debit", "type": "amount", "width": 14},
-                4: {"header": _("Credit"), "field": "credit", "type": "amount", "width": 14},
-                # 5: {"header": _("Period balance"), "field": "balance", "type": "amount", "width": 14},
-                5: {"header": _("Ending balance"), "field": "ending_balance", "type": "amount", "width": 14},
-            }
+            columns.extend([
+                {"header": _("Code"), "field": "code", "width": 10},
+                {"header": _("Account"), "field": "name", "width": 60},
+                {"header": _("Initial balance"), "field": "initial_balance", "type": "amount", "width": 14},
+                {"header": _("Debit"), "field": "debit", "type": "amount", "width": 14},
+                {"header": _("Credit"), "field": "credit", "type": "amount", "width": 14},
+                {"header": _("Ending balance"), "field": "ending_balance", "type": "amount", "width": 14},
+            ])
 
             if report.foreign_currency:
-                foreign_currency = {
-                    6: {"header": _("Moneda"), "field": "currency_id.symbol", "type": "string", "width": 7},
-                    # 8: {"header": _("Initial balance"), "field": "initial_currency_balance", "type": "amount_currency",
-                    #     "width": 14},
-                    7: {"header": _("Ending balance"), "field": "ending_currency_balance", "type": "amount_currency",
-                        "width": 14},
-                }
-                res.update(foreign_currency)
-            return res
+                columns.extend([
+                    {"header": _("Moneda"), "field": "currency_id.symbol", "type": "string", "width": 7},
+                    {"header": _("Ending balance"), "field": "ending_currency_balance",
+                     "type": "amount_currency", "width": 14},
+                ])
 
         else:
-            res = {
-                0: {"header": _("Partner"), "field": "name", "width": 70},
-                1: {"header": _("Initial balance"), "field": "initial_balance", "type": "amount", "width": 14},
-                2: {"header": _("Debit"), "field": "debit", "type": "amount", "width": 14},
-                3: {"header": _("Credit"), "field": "credit", "type": "amount", "width": 14},
-                # 4: {"header": _("Period balance"), "field": "balance", "type": "amount", "width": 14},
-                4: {"header": _("Ending balance"), "field": "ending_balance", "type": "amount", "width": 14},
-            }
+            columns.extend([
+                {"header": _("Partner"), "field": "name", "width": 70},
+                {"header": _("Initial balance"), "field": "initial_balance", "type": "amount", "width": 14},
+                {"header": _("Debit"), "field": "debit", "type": "amount", "width": 14},
+                {"header": _("Credit"), "field": "credit", "type": "amount", "width": 14},
+                {"header": _("Ending balance"), "field": "ending_balance", "type": "amount", "width": 14},
+            ])
 
             if report.foreign_currency:
-                foreign_currency = {
-                    5: {"header": _("Moneda"), "field": "currency_id.symbol", "type": "string", "width": 7},
-                    # 7: {"header": _("Initial balance"), "field": "initial_currency_balance", "type": "amount_currency",
-                    #     "width": 14},
-                    6: {"header": _("Ending balance"), "field": "ending_currency_balance", "type": "amount_currency",
-                        "width": 14},
+                columns.extend([
+                    {"header": _("Moneda"), "field": "currency_id.symbol", "type": "string", "width": 7},
+                    {"header": _("Ending balance"), "field": "ending_currency_balance",
+                     "type": "amount_currency", "width": 14},
+                ])
 
-                }
-                res.update(foreign_currency)
-            return res
+        return {index: col for index, col in enumerate(columns)}
 
     def _get_report_filters(self, report):
         return [
@@ -143,12 +134,18 @@ class TrialBalanceXslx(models.AbstractModel):
                 self.write_array_header(report_data)
                 # For each account
                 for balance in trial_balance:
+                    account_id = balance.get('id')
+                    if account_id and accounts_data.get(account_id):
+                        # Inyectamos el símbolo si no está
+                        if not balance.get('currency_id.symbol') and accounts_data[account_id].get(
+                                'currency_id.symbol'):
+                            balance['currency_id.symbol'] = accounts_data[account_id]['currency_id.symbol']
+
                     if show_hierarchy and limit_hierarchy_level:
                         if show_hierarchy_level > balance["level"] and (
                                 not hide_parent_hierarchy_level
                                 or (show_hierarchy_level - 1) == balance["level"]
                         ):
-                            # Display account lines
                             self.write_line_from_dict(balance, report_data)
                     else:
                         self.write_line_from_dict(balance, report_data)
@@ -207,19 +204,21 @@ class TrialBalanceXslx(models.AbstractModel):
                 report_data["row_pos"] += 2
 
     def _prepare_currency_symbol(self, balance):
-        """Prepara currency_id.symbol para que no explote si es int."""
         currency_id = balance.get("currency_id")
-        if isinstance(currency_id, int) and currency_id:
+        if isinstance(currency_id, (list, tuple)) and currency_id:
+            currency = self.env["res.currency"].browse(currency_id[0])
+            balance["currency_id.symbol"] = currency.symbol or ""
+        elif isinstance(currency_id, int) and currency_id:
             currency = self.env["res.currency"].browse(currency_id)
             balance["currency_id.symbol"] = currency.symbol or ""
         else:
             balance["currency_id.symbol"] = ""
-
     def write_line_from_dict_order(self, total_amount, partner_data, report_data):
         total_amount.update({
             "name": str(partner_data["name"]),
-            "currency_id.symbol": total_amount.get("currency_id").symbol if total_amount.get("currency_id") else ""
         })
+        # Prepara el símbolo de la moneda correctamente
+        self._prepare_currency_symbol(total_amount)
         self.write_line_from_dict(total_amount, report_data)
 
     def write_line(self, line_object, type_object, report_data):
