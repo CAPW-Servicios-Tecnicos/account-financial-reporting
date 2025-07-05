@@ -72,6 +72,19 @@ class TrialBalanceReportWizard(models.TransientModel):
         selection=[("analytic_account", "Analytic Account")], default=False
     )
 
+    # --- 330101 ---
+    manual_330101_initial = fields.Float("Inicial - 330101 Resultados anteriores")
+    manual_330101_debit = fields.Float("Débito - 330101")
+    manual_330101_credit = fields.Float("Crédito - 330101")
+    manual_330101_final = fields.Float("Final - 330101")
+
+    # --- 3401 ---
+    manual_3401_initial = fields.Float("Inicial - 3401 Resultado del periodo")
+    manual_3401_debit = fields.Float("Débito - 3401")
+    manual_3401_credit = fields.Float("Crédito - 3401")
+    manual_3401_final = fields.Float("Final - 3401")
+
+
     @api.onchange("grouped_by")
     def onchange_grouped_by(self):
         if self.grouped_by == "analytic_account":
@@ -231,6 +244,92 @@ class TrialBalanceReportWizard(models.TransientModel):
                 ]
             )
 
+    def _compute_prior_year_results_330101(self):
+        """Calcula los resultados anteriores para la cuenta 330101."""
+        self.ensure_one()
+
+        domain_common = [
+            ("date", "<=", self.date_from),
+            ("company_id", "=", self.company_id.id),
+        ]
+
+        if self.target_move == "posted":
+            domain_common.append(("move_id.state", "=", "posted"))
+
+        account_types = [
+            "income", "income_other",
+            "expense", "expense_depreciation", "expense_direct_cost"
+        ]
+        pl_accounts = self.env["account.account"].search([
+            ("company_id", "=", self.company_id.id),
+            "|",
+            ("account_type", "in", account_types),
+            ("code", "=", "330101"),
+        ])
+
+        grouped = self.env["account.move.line"].read_group(
+            domain_common + [("account_id", "in", pl_accounts.ids)],
+            ["debit", "credit"],
+            []
+        )
+        total_debit = grouped[0]["debit"] if grouped else 0.0
+        total_credit = grouped[0]["credit"] if grouped else 0.0
+        balance =  total_debit - total_credit
+
+        return {
+            "initial_balance": 0.0,
+            "debit": total_debit,
+            "credit": total_credit,
+            "ending_balance": balance,
+        }
+
+    def _compute_profit_and_loss_components(self):
+        """Calcula los valores contables para la cuenta 3401 (resultado del período)."""
+        self.ensure_one()
+
+        # Determinar fechas: desde 1ro de enero del año de date_to hasta date_to
+        fiscal_year_start = fields.Date.from_string(f"{self.date_to.year}-01-01")
+        date_from = self.date_from
+        date_to = self.date_to
+
+        # Dominio base
+        domain_common = [
+            ("date", ">=", date_from),
+            ("date", "<=", date_to),
+            ("company_id", "=", self.company_id.id),
+        ]
+        if self.target_move == "posted":
+            domain_common.append(("move_id.state", "=", "posted"))
+
+        # Tipos de cuenta: ingresos + egresos
+        account_types = [
+            "income", "income_other",
+            "expense", "expense_depreciation", "expense_direct_cost"
+        ]
+        pl_accounts = self.env["account.account"].search([
+            ("company_id", "=", self.company_id.id),
+            "|",
+            ("account_type", "in", account_types),
+            ("code", "=", "3401"),
+        ])
+
+        # Agrupación y suma
+        grouped = self.env["account.move.line"].read_group(
+            domain_common + [("account_id", "in", pl_accounts.ids)],
+            ["debit", "credit"],
+            []
+        )
+        total_debit = grouped[0]["debit"] if grouped else 0.0
+        total_credit = grouped[0]["credit"] if grouped else 0.0
+        balance = total_debit - total_credit
+
+        return {
+            "initial_balance": 0.0,
+            "debit": total_debit,
+            "credit": total_credit,
+            "ending_balance": balance,
+        }
+
     unaffected_earnings_account = fields.Many2one(
         comodel_name="account.account",
         compute="_compute_unaffected_earnings_account",
@@ -275,6 +374,11 @@ class TrialBalanceReportWizard(models.TransientModel):
             "unaffected_earnings_account": self.unaffected_earnings_account.id,
             "account_financial_report_lang": self.env.lang,
             "grouped_by": self.grouped_by,
+
+            "manual_balances": {
+                "330101":  self._compute_prior_year_results_330101(),
+                "3401": self._compute_profit_and_loss_components(),
+            }
         }
 
     def _export(self, report_type):
