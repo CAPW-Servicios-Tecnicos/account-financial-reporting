@@ -245,50 +245,105 @@ class TrialBalanceReportWizard(models.TransientModel):
             )
 
     def _compute_prior_year_results_330101(self):
-        """Calcula los resultados anteriores para la cuenta 330101."""
+        """Calcula balance inicial, débitos, créditos y balance final usando account_type y cuenta 330101."""
         self.ensure_one()
 
-        domain_common = [
-            ("date", "<=", self.date_from),
-            ("company_id", "=", self.company_id.id),
-        ]
-
-        if self.target_move == "posted":
-            domain_common.append(("move_id.state", "=", "posted"))
-
+        # Tipos de cuentas consideradas para resultados
         account_types = [
             "income", "income_other",
             "expense", "expense_depreciation", "expense_direct_cost"
         ]
-        pl_accounts = self.env["account.account"].search([
+
+        # Buscar las cuentas que aplican
+        accounts = self.env["account.account"].search([
             ("company_id", "=", self.company_id.id),
             "|",
             ("account_type", "in", account_types),
-            ("code", "=", "330101"),
+            ("code", "in", ["330101", "3401"]),
         ])
 
-        grouped = self.env["account.move.line"].read_group(
-            domain_common + [("account_id", "in", pl_accounts.ids)],
+        # accounts = self.env["account.account"].search([
+        #     ("company_id", "=", self.company_id.id),
+        #     "|",
+        #     ("account_type", "in", account_types),
+        #     ("code", "=", "330101"),
+        # ])
+
+        if not accounts:
+            return {
+                "initial_balance": 0.0,
+                "debit": 0.0,
+                "credit": 0.0,
+                "ending_balance": 0.0,
+            }
+
+        domain_final = [
+            ("date", "<=", self.date_from),
+            ("company_id", "=", self.company_id.id),
+            ("account_id", "in", accounts.ids),
+        ]
+
+        # Dominio para balance inicial: antes del período
+        domain_initial = [
+            ("date", "<", self.date_from),
+            ("company_id", "=", self.company_id.id),
+            ("account_id", "in", accounts.ids),
+        ]
+
+        # Dominio para débitos y créditos en el período actual
+        domain_range = [
+            ("date", ">=", self.date_from),
+            ("date", "<=", self.date_to),
+            ("company_id", "=", self.company_id.id),
+            ("account_id", "in", accounts.ids),
+        ]
+
+        if self.target_move == "posted":
+            domain_initial.append(("move_id.state", "=", "posted"))
+            domain_final.append(("move_id.state", "=", "posted"))
+            domain_range.append(("move_id.state", "=", "posted"))
+
+        # Balance inicial
+        initial_group = self.env["account.move.line"].read_group(
+            domain_initial,
             ["debit", "credit"],
             []
         )
-        total_debit = grouped[0]["debit"] if grouped else 0.0
-        total_credit = grouped[0]["credit"] if grouped else 0.0
-        balance =  total_debit - total_credit
+
+        final_group = self.env["account.move.line"].read_group(
+            domain_final,
+            ["debit", "credit"],
+            []
+        )
+
+        initial_debit = initial_group[0]["debit"] if initial_group else 0.0
+        initial_credit = initial_group[0]["credit"] if initial_group else 0.0
+        initial_balance = initial_debit - initial_credit
+
+        final_debit = final_group[0]["debit"] if final_group else 0.0
+        final_credit = final_group[0]["credit"] if final_group else 0.0
+        final_balance = final_debit - final_credit
+
+        # Débitos y créditos del período
+        # range_group = self.env["account.move.line"].read_group(
+        #     domain_range,
+        #     ["debit", "credit"],
+        #     []
+        # )
+        # debit = range_group[0]["debit"] if range_group else 0.0
+        # credit = range_group[0]["credit"] if range_group else 0.0
 
         return {
-            "initial_balance": 0.0,
-            "debit": total_debit,
-            "credit": total_credit,
-            "ending_balance": balance,
+            "initial_balance": initial_balance,
+            "debit": 0.0,
+            "credit": 0.0,
+            "ending_balance": final_balance,
         }
 
     def _compute_profit_and_loss_components(self):
         """Calcula los valores contables para la cuenta 3401 (resultado del período)."""
         self.ensure_one()
 
-        # Determinar fechas: desde 1ro de enero del año de date_to hasta date_to
-        fiscal_year_start = fields.Date.from_string(f"{self.date_to.year}-01-01")
         date_from = self.date_from
         date_to = self.date_to
 
