@@ -285,7 +285,7 @@ class TrialBalanceReportWizard(models.TransientModel):
 
         # Dominio para balance inicial: antes del período
         domain_initial = [
-            ("date", "<", self.date_from),
+            ("date", "<", self.fy_start_date),
             ("company_id", "=", self.company_id.id),
             ("account_id", "in", accounts.ids),
         ]
@@ -347,14 +347,32 @@ class TrialBalanceReportWizard(models.TransientModel):
         date_from = self.date_from
         date_to = self.date_to
 
+
         # Dominio base
         domain_common = [
-            ("date", ">=", date_from),
+            ("date", ">=", self.fy_start_date),
             ("date", "<=", date_to),
             ("company_id", "=", self.company_id.id),
         ]
+
+        # Dominio initial
+        domain_initial = [
+            ("date", ">=", self.fy_start_date),
+            ("date", "<", date_from),
+            ("company_id", "=", self.company_id.id),
+        ]
+
+        # Dominio para débitos y créditos en el período actual
+        domain_range = [
+            ("date", ">=", self.date_from),
+            ("date", "<=", self.date_to),
+            ("company_id", "=", self.company_id.id),
+        ]
+
         if self.target_move == "posted":
             domain_common.append(("move_id.state", "=", "posted"))
+            domain_initial.append(("move_id.state", "=", "posted"))
+            domain_range.append(("move_id.state", "=", "posted"))
 
         # Tipos de cuenta: ingresos + egresos
         account_types = [
@@ -374,14 +392,36 @@ class TrialBalanceReportWizard(models.TransientModel):
             ["debit", "credit"],
             []
         )
+
+        # Agrupación y suma Initial
+        grouped_initial = self.env["account.move.line"].read_group(
+            domain_initial + [("account_id", "in", pl_accounts.ids)],
+            ["debit", "credit"],
+            []
+        )
+
+        # Débitos y créditos del período
+        range_group = self.env["account.move.line"].read_group(
+            domain_range + [("account_id", "in", pl_accounts.ids)],
+            ["debit", "credit"],
+            []
+        )
+
+        debit = range_group[0]["debit"] if range_group else 0.0
+        credit = range_group[0]["credit"] if range_group else 0.0
+
         total_debit = grouped[0]["debit"] if grouped else 0.0
         total_credit = grouped[0]["credit"] if grouped else 0.0
         balance = total_debit - total_credit
 
+        initial_debit = grouped_initial[0]["debit"] if grouped else 0.0
+        initial_credit = grouped_initial[0]["credit"] if grouped else 0.0
+        balance_initial = initial_debit - initial_credit
+
         return {
-            "initial_balance": 0.0,
-            "debit": total_debit,
-            "credit": total_credit,
+            "initial_balance": balance_initial,
+            "debit": debit,
+            "credit": credit,
             "ending_balance": balance,
         }
 
