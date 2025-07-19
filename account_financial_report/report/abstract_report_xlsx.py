@@ -79,6 +79,10 @@ class AbstractReportXslx(models.AbstractModel):
             "format_percent_bold_italic": workbook.add_format(
                 {"bold": True, "italic": True}
             ),
+            "format_bold_string": workbook.add_format({"bold": True}),
+            "format_bold_amount": workbook.add_format({"bold": True, "align": "right", "num_format": "#,##0.00"}),
+            "format_bold_currency": workbook.add_format({"bold": True, "align": "right", "num_format": "#,##0.00"}),
+
         }
         report_data["formats"]["format_amount"].set_num_format(
             "#,##0." + "0" * currency_id.decimal_places
@@ -235,55 +239,51 @@ class AbstractReportXslx(models.AbstractModel):
 
     def write_line_from_dict(self, line_dict, report_data):
         """Write a line on current line"""
+        is_group_line = bool(line_dict.get("account_group_id")) or line_dict.get("type") == "group_type"
+
         for col_pos, column in report_data["columns"].items():
             value = line_dict.get(column["field"], False)
             cell_type = column.get("type", "string")
+
             if cell_type == "string":
-                if line_dict.get("type", "") == "group_type":
-                    report_data["sheet"].write_string(
-                        report_data["row_pos"],
-                        col_pos,
-                        value or "",
-                        report_data["formats"]["format_bold"],
-                    )
-                else:
-                    if (
-                        not isinstance(value, str)
-                        and not isinstance(value, bool)
-                        and not isinstance(value, int)
-                    ):
-                        value = value and value.strftime("%d/%m/%Y")
-                    report_data["sheet"].write_string(
-                        report_data["row_pos"], col_pos, value or ""
-                    )
-            elif cell_type == "amount":
-                if (
-                    line_dict.get("account_group_id", False)
-                    and line_dict["account_group_id"]
-                ):
-                    cell_format = report_data["formats"]["format_amount_bold"]
-                else:
-                    cell_format = report_data["formats"]["format_amount"]
-                report_data["sheet"].write_number(
-                    report_data["row_pos"], col_pos, float(value), cell_format
-                )
-            elif cell_type == "amount_currency":
-                if line_dict.get("currency_name", False):
-                    format_amt = self._get_currency_amt_format_dict(
-                        line_dict, report_data
-                    )
-                    report_data["sheet"].write_number(
-                        report_data["row_pos"], col_pos, float(value), format_amt
-                    )
-            elif cell_type == "currency_name":
+                # Convertir fecha si aplica
+                if not isinstance(value, (str, bool, int)):
+                    value = value and value.strftime("%d/%m/%Y")
+                cell_format = report_data["formats"]["format_bold"] if is_group_line else None
                 report_data["sheet"].write_string(
                     report_data["row_pos"],
                     col_pos,
                     value or "",
-                    report_data["formats"]["format_right"],
+                    cell_format,
                 )
+
+            elif cell_type == "amount":
+                cell_format = report_data["formats"]["format_amount_bold"] if is_group_line else report_data["formats"][
+                    "format_amount"]
+                report_data["sheet"].write_number(
+                    report_data["row_pos"], col_pos, float(value), cell_format
+                )
+
+            elif cell_type == "amount_currency":
+                if line_dict.get("currency_name", False):
+                    format_amt = self._get_currency_amt_format_dict(line_dict, report_data)
+                    # aplicar negrita si es línea de grupo
+                    if is_group_line:
+                        format_amt.set_bold()
+                    report_data["sheet"].write_number(
+                        report_data["row_pos"], col_pos, float(value), format_amt
+                    )
+
+            elif cell_type == "currency_name":
+                cell_format = report_data["formats"]["format_bold"] if is_group_line else report_data["formats"][
+                    "format_right"]
+                report_data["sheet"].write_string(
+                    report_data["row_pos"], col_pos, value or "", cell_format
+                )
+
             else:
                 self.write_non_standard_column(cell_type, col_pos, value)
+
         report_data["row_pos"] += 1
 
     def write_initial_balance(self, my_object, label, report_data):

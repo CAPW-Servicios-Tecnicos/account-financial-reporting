@@ -347,13 +347,13 @@ class TrialBalanceReportWizard(models.TransientModel):
         date_from = self.date_from
         date_to = self.date_to
 
-
         # Dominio base
         domain_common = [
             ("date", ">=", self.fy_start_date),
             ("date", "<=", date_to),
             ("company_id", "=", self.company_id.id),
         ]
+
 
         # Dominio initial
         domain_initial = [

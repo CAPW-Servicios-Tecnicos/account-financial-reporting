@@ -83,10 +83,6 @@ class TrialBalanceXslx(models.AbstractModel):
 
         # Inyectar manual balances para 330101 y 3401
         manual_values = data.get("manual_balances", {})
-        # wizard = self.env["trial.balance.report.wizard"].browse(data.get("wizard_id"))
-        # if wizard:
-        #     manual_values["330101"] = wizard._compute_prior_year_results_330101()
-        #     manual_values["3401"] = wizard._compute_profit_and_loss_components()
 
         if not show_partner_details:
             if grouped_by:
