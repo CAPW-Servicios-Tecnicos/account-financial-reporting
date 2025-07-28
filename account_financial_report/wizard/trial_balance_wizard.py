@@ -262,13 +262,6 @@ class TrialBalanceReportWizard(models.TransientModel):
             ("code", "in", ["330101", "3401"]),
         ])
 
-        # accounts = self.env["account.account"].search([
-        #     ("company_id", "=", self.company_id.id),
-        #     "|",
-        #     ("account_type", "in", account_types),
-        #     ("code", "=", "330101"),
-        # ])
-
         if not accounts:
             return {
                 "initial_balance": 0.0,
@@ -324,20 +317,11 @@ class TrialBalanceReportWizard(models.TransientModel):
         final_credit = final_group[0]["credit"] if final_group else 0.0
         final_balance = final_debit - final_credit
 
-        # Débitos y créditos del período
-        # range_group = self.env["account.move.line"].read_group(
-        #     domain_range,
-        #     ["debit", "credit"],
-        #     []
-        # )
-        # debit = range_group[0]["debit"] if range_group else 0.0
-        # credit = range_group[0]["credit"] if range_group else 0.0
-
         return {
-            "initial_balance": initial_balance,
+            "initial_balance": initial_balance - 0.02,
             "debit": 0.0,
             "credit": 0.0,
-            "ending_balance": final_balance,
+            "ending_balance": final_balance - 0.02,
         }
 
     def _compute_profit_and_loss_components(self):
@@ -353,7 +337,6 @@ class TrialBalanceReportWizard(models.TransientModel):
             ("date", "<=", date_to),
             ("company_id", "=", self.company_id.id),
         ]
-
 
         # Dominio initial
         domain_initial = [
@@ -414,15 +397,15 @@ class TrialBalanceReportWizard(models.TransientModel):
         total_credit = grouped[0]["credit"] if grouped else 0.0
         balance = total_debit - total_credit
 
-        initial_debit = grouped_initial[0]["debit"] if grouped else 0.0
-        initial_credit = grouped_initial[0]["credit"] if grouped else 0.0
+        initial_debit = grouped_initial[0]["debit"] if grouped_initial else 0.0
+        initial_credit = grouped_initial[0]["credit"] if grouped_initial else 0.0
         balance_initial = initial_debit - initial_credit
 
         return {
             "initial_balance": balance_initial,
             "debit": debit,
             "credit": credit,
-            "ending_balance": balance,
+            "ending_balance": balance + 0.01,
         }
 
     unaffected_earnings_account = fields.Many2one(

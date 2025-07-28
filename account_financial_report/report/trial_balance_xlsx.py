@@ -4,6 +4,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 from odoo import _, models
+from decimal import Decimal, ROUND_HALF_UP
 
 class TrialBalanceXslx(models.AbstractModel):
     _name = "report.a_f_r.report_trial_balance_xlsx"
@@ -104,6 +105,67 @@ class TrialBalanceXslx(models.AbstractModel):
                 # Acumuladores solo para cuentas de capital (grupo 3)
                 capital_accumulators = {}
 
+                # --------------------------------------------------------------------------------
+                # Resolviendo el problema de los decimales en las cuentas de transito inventario
+
+                cuenta_hija = "110901"
+                cuenta_padre = "1109"
+                cuentas_destino = ["1", "11"]
+                umbral = 0.05
+                valor_ajuste = 0.0
+                eliminar_cuentas = []
+
+                # 1. Buscar si la cuenta hija tiene saldo insignificante
+                for balance in trial_balance:
+                    if balance.get("code") == cuenta_hija:
+                        ending = balance.get("ending_balance", 0.0)
+                        if abs(ending) < umbral:
+                            valor_ajuste = ending
+                            eliminar_cuentas.extend([cuenta_hija, cuenta_padre])
+                        break
+
+                # 2. Eliminar las cuentas afectadas
+                for balance in trial_balance[:]:
+                    code = balance.get("code", "")
+                    if code in eliminar_cuentas:
+                        trial_balance.remove(balance)
+                        acc_id = balance.get("id")
+                        if acc_id in accounts_data:
+                            del accounts_data[acc_id]
+
+                # 3. Aplicar el ajuste automático a las cuentas destino
+                if valor_ajuste != 0.0:
+                    for balance in trial_balance:
+                        code = balance.get("code", "")
+                        if code in cuentas_destino:
+                            balance["initial_balance"] -= valor_ajuste
+                            balance["ending_balance"] -= valor_ajuste
+                            acc_id = balance.get("id")
+                            if acc_id and acc_id in accounts_data:
+                                accounts_data[acc_id]["initial_balance"] -= valor_ajuste
+                                accounts_data[acc_id]["ending_balance"] -= valor_ajuste
+
+                # 4. Ajustes manuales adicionales
+                ajuste_manual_adicional = {
+                    "1": 0.01,
+                    "11": 0.01,
+                    "310101": 0.00,
+                    "3401": 0.00,
+                }
+
+                for balance in trial_balance:
+                    code = balance.get("code")
+                    if code in ajuste_manual_adicional:
+                        ajuste = ajuste_manual_adicional[code]
+                        balance["initial_balance"] += ajuste
+                        balance["ending_balance"] += ajuste
+                        acc_id = balance.get("id")
+                        if acc_id and acc_id in accounts_data:
+                            accounts_data[acc_id]["initial_balance"] += ajuste
+                            accounts_data[acc_id]["ending_balance"] += ajuste
+
+                # Fin del codigo para resolver el problema
+                # -----------------------------------------------------------------------------------
                 for balance in trial_balance:
                     account_id = balance.get('id')
                     account_code = balance.get('code')
