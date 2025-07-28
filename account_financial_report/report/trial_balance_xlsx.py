@@ -111,58 +111,88 @@ class TrialBalanceXslx(models.AbstractModel):
                 cuenta_hija = "110901"
                 cuenta_padre = "1109"
                 cuentas_destino = ["1", "11"]
-                umbral = 0.05
+                umbral = 0.06
+
+                # Flags y valores de ajuste
+                ajustar_completo = False
+                ajustar_inicial = False
                 valor_ajuste = 0.0
                 eliminar_cuentas = []
 
-                # 1. Buscar si la cuenta hija tiene saldo insignificante
+                # 1. Determinar tipo de ajuste según saldo de la cuenta hija
                 for balance in trial_balance:
                     if balance.get("code") == cuenta_hija:
-                        ending = balance.get("ending_balance", 0.0)
-                        if abs(ending) < umbral:
-                            valor_ajuste = ending
-                            eliminar_cuentas.extend([cuenta_hija, cuenta_padre])
+                        init = balance.get("initial_balance", 0.0)
+                        end = balance.get("ending_balance", 0.0)
+                        abs_init = abs(init)
+                        abs_end = abs(end)
+                        if abs_init < umbral and abs_end < umbral:
+                            # ✅ Caso A: ambos saldos pequeños → eliminar y ajustar con ENDING
+                            valor_ajuste = end
+                            ajustar_completo = True
+                            eliminar_cuentas = [cuenta_hija, cuenta_padre]
+                        elif abs_init < umbral and abs_end >= umbral:
+                            # ✅ Caso B: solo initial pequeño → ajustar solo initial
+                            valor_ajuste = init
+                            ajustar_inicial = True
                         break
 
-                # 2. Eliminar las cuentas afectadas
-                for balance in trial_balance[:]:
-                    code = balance.get("code", "")
-                    if code in eliminar_cuentas:
-                        trial_balance.remove(balance)
-                        acc_id = balance.get("id")
-                        if acc_id in accounts_data:
-                            del accounts_data[acc_id]
+                # 2. Eliminar solo si se cumple el Caso A (ambos saldos menores al umbral)
+                if ajustar_completo:
+                    for b in trial_balance[:]:
+                        if b.get("code") in eliminar_cuentas:
+                            trial_balance.remove(b)
+                            acc_id = b.get("id")
+                            if acc_id in accounts_data:
+                                del accounts_data[acc_id]
 
-                # 3. Aplicar el ajuste automático a las cuentas destino
-                if valor_ajuste != 0.0:
-                    for balance in trial_balance:
-                        code = balance.get("code", "")
-                        if code in cuentas_destino:
-                            balance["initial_balance"] -= valor_ajuste
-                            balance["ending_balance"] -= valor_ajuste
-                            acc_id = balance.get("id")
+                # 3. Aplicar ajuste completo (Caso A) a cuentas destino
+                if ajustar_completo and valor_ajuste != 0.0:
+                    for b in trial_balance:
+                        if b.get("code") in cuentas_destino:
+                            b["initial_balance"] -= valor_ajuste
+                            b["ending_balance"] -= valor_ajuste
+                            acc_id = b.get("id")
                             if acc_id and acc_id in accounts_data:
                                 accounts_data[acc_id]["initial_balance"] -= valor_ajuste
                                 accounts_data[acc_id]["ending_balance"] -= valor_ajuste
 
-                # 4. Ajustes manuales adicionales
-                ajuste_manual_adicional = {
-                    "1": 0.01,
-                    "11": 0.01,
-                    "310101": 0.00,
-                    "3401": 0.00,
-                }
+                # 4. Aplicar ajuste parcial (Caso B)
+                if ajustar_inicial:
+                    ajuste_realizado = False
+                    init_val = 0.0
 
-                for balance in trial_balance:
-                    code = balance.get("code")
-                    if code in ajuste_manual_adicional:
-                        ajuste = ajuste_manual_adicional[code]
-                        balance["initial_balance"] += ajuste
-                        balance["ending_balance"] += ajuste
-                        acc_id = balance.get("id")
-                        if acc_id and acc_id in accounts_data:
-                            accounts_data[acc_id]["initial_balance"] += ajuste
-                            accounts_data[acc_id]["ending_balance"] += ajuste
+                    # Ajuste cuenta hija
+                    for b in trial_balance:
+                        if b.get("code") == cuenta_hija:
+                            init_val = b.get("initial_balance", 0.0)
+                            b["initial_balance"] = 0.0
+                            b["ending_balance"] -= init_val
+                            ajuste_realizado = True
+                            break
+
+                    # Ajustar cuentas destino
+                    if ajuste_realizado:
+                        for b in trial_balance:
+                            if b.get("code") in cuentas_destino:
+                                b["initial_balance"] -= valor_ajuste
+                                b["ending_balance"] -= valor_ajuste
+                                acc_id = b.get("id")
+                                if acc_id and acc_id in accounts_data:
+                                    accounts_data[acc_id]["initial_balance"] -= valor_ajuste
+                                    accounts_data[acc_id]["ending_balance"] -= valor_ajuste
+
+                # 5. Sin diferencia: solo copiar los valores finales de la hija a la cuenta padre
+                hija = next((b for b in trial_balance if b.get("code") == cuenta_hija), None)
+                padre = next((b for b in trial_balance if b.get("code") == cuenta_padre), None)
+
+                if hija and padre:
+                    padre["initial_balance"] = hija["initial_balance"]
+                    padre["ending_balance"] = hija["ending_balance"]
+                    acc_id = padre.get("id")
+                    if acc_id and acc_id in accounts_data:
+                        accounts_data[acc_id]["initial_balance"] = hija["initial_balance"]
+                        accounts_data[acc_id]["ending_balance"] = hija["ending_balance"]
 
                 # Fin del codigo para resolver el problema
                 # -----------------------------------------------------------------------------------
