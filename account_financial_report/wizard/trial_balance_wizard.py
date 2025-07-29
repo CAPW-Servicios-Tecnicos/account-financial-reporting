@@ -270,11 +270,20 @@ class TrialBalanceReportWizard(models.TransientModel):
                 "ending_balance": 0.0,
             }
 
-        domain_final = [
-            ("date", "<=", self.date_from),
-            ("company_id", "=", self.company_id.id),
-            ("account_id", "in", accounts.ids),
-        ]
+        if self.date_from.year != self.date_to.year:
+            # Si los años son diferentes, usar date_to
+            domain_final = [
+                ("date", "<=", self.date_to),
+                ("company_id", "=", self.company_id.id),
+                ("account_id", "in", accounts.ids),
+            ]
+        else:
+            # Si el año es el mismo, mantener date_from
+            domain_final = [
+                ("date", "<=", self.fy_start_date),
+                ("company_id", "=", self.company_id.id),
+                ("account_id", "in", accounts.ids),
+            ]
 
         # Dominio para balance inicial: antes del período
         domain_initial = [
