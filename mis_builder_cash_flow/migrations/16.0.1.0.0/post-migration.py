@@ -1,10 +1,18 @@
-# Copyright 2024 Tecnativa - Pedro M. Baeza
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 from odoo import api, SUPERUSER_ID
+import logging
+
+_logger = logging.getLogger(__name__)
 
 def migrate(cr, version):
+    """Carga datos de noupdate_changes.xml sin usar openupgradelib"""
     env = api.Environment(cr, SUPERUSER_ID, {})
-    env.ref('mis_builder_cash_flow.noupdate_changes', False)
-    env['ir.model.data']._load_xml_files(
-        'mis_builder_cash_flow', ['migrations/16.0.1.0.0/noupdate_changes.xml']
-    )
+
+    try:
+        # Usamos el método estándar para cargar datos XML
+        env['ir.module.module'].load_xml(
+            'mis_builder_cash_flow',
+            ['migrations/16.0.1.0.0/noupdate_changes.xml']
+        )
+        _logger.info("Datos de noupdate_changes.xml cargados correctamente durante la migración.")
+    except Exception as e:
+        _logger.error("Error al cargar noupdate_changes.xml durante la migración: %s", str(e))
