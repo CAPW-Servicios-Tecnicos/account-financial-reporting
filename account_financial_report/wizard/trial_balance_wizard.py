@@ -293,7 +293,7 @@ class TrialBalanceReportWizard(models.TransientModel):
             domain_final = [
                 ("date", "<=", self.date_to),
                 ("company_id", "=", self.company_id.id),
-                ("account_id", "in", accounts_range.ids),
+                ("account_id", "in", accounts.ids),
             ]
 
         # Dominio para balance inicial: antes del período
@@ -340,13 +340,16 @@ class TrialBalanceReportWizard(models.TransientModel):
         debit = range_group[0]["debit"] if range_group else 0.0
         credit = range_group[0]["credit"] if range_group else 0.0
 
+        balance = debit - credit
+
         initial_debit = initial_group[0]["debit"] if initial_group else 0.0
         initial_credit = initial_group[0]["credit"] if initial_group else 0.0
         initial_balance = initial_debit - initial_credit
 
         final_debit = final_group[0]["debit"] if final_group else 0.0
         final_credit = final_group[0]["credit"] if final_group else 0.0
-        final_balance = final_debit - final_credit
+        # final_balance = final_debit - final_credit
+        final_balance = initial_balance + balance
 
         return {
             "initial_balance": initial_balance - 0.02,
