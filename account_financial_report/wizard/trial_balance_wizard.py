@@ -271,12 +271,12 @@ class TrialBalanceReportWizard(models.TransientModel):
             }
 
         # Dominio base
-        domain_common = [
-            ("date", ">=", self.fy_start_date),
-            ("date", "<=", self.date_to),
-            ("company_id", "=", self.company_id.id),
-            ("account_id", "in", accounts.ids),
-        ]
+        # domain_common = [
+        #     ("date", ">=", self.fy_start_date),
+        #     ("date", "<=", self.date_to),
+        #     ("company_id", "=", self.company_id.id),
+        #     ("account_id", "in", accounts.ids),
+        # ]
 
         if self.date_from.year != self.date_to.year:
             # Si los años son diferentes, usar date_to
@@ -287,8 +287,13 @@ class TrialBalanceReportWizard(models.TransientModel):
             ]
         else:
             # Si el año es el mismo, mantener date_from
+            # domain_final = [
+            #     ("date", "<=", self.fy_start_date),
+            #     ("company_id", "=", self.company_id.id),
+            #     ("account_id", "in", accounts.ids),
+            # ]
             domain_final = [
-                ("date", "<=", self.fy_start_date),
+                ("date", "<=", self.date_to),
                 ("company_id", "=", self.company_id.id),
                 ("account_id", "in", accounts.ids),
             ]
@@ -309,17 +314,16 @@ class TrialBalanceReportWizard(models.TransientModel):
         ]
 
         if self.target_move == "posted":
-            domain_common.append(("move_id.state", "=", "posted"))
+            # domain_common.append(("move_id.state", "=", "posted"))
             domain_initial.append(("move_id.state", "=", "posted"))
             domain_final.append(("move_id.state", "=", "posted"))
             domain_range.append(("move_id.state", "=", "posted"))
 
-        # Balance inicial
-        common_group = self.env["account.move.line"].read_group(
-            domain_common,
-            ["debit", "credit"],
-            []
-        )
+        # common_group = self.env["account.move.line"].read_group(
+        #     domain_common,
+        #     ["debit", "credit"],
+        #     []
+        # )
 
         # Balance inicial
         initial_group = self.env["account.move.line"].read_group(
@@ -341,9 +345,9 @@ class TrialBalanceReportWizard(models.TransientModel):
             []
         )
 
-        total_debit = common_group[0]["debit"] if common_group else 0.0
-        total_credit = common_group[0]["credit"] if common_group else 0.0
-        balance = total_debit - total_credit
+        # total_debit = common_group[0]["debit"] if common_group else 0.0
+        # total_credit = common_group[0]["credit"] if common_group else 0.0
+        # balance = total_debit - total_credit
 
         debit = range_group[0]["debit"] if range_group else 0.0
         credit = range_group[0]["credit"] if range_group else 0.0
@@ -360,7 +364,7 @@ class TrialBalanceReportWizard(models.TransientModel):
             "initial_balance": initial_balance - 0.02,
             "debit": debit,
             "credit": credit,
-            "ending_balance": balance - 0.02,
+            "ending_balance": final_balance - 0.02,
         }
 
     def _compute_profit_and_loss_components(self):
