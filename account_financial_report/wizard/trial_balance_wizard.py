@@ -279,6 +279,11 @@ class TrialBalanceReportWizard(models.TransientModel):
             ]
         else:
             # Si el año es el mismo, mantener date_from
+            # domain_final = [
+            #     ("date", "<=", self.fy_start_date),
+            #     ("company_id", "=", self.company_id.id),
+            #     ("account_id", "in", accounts.ids),
+            # ]
             domain_final = [
                 ("date", "<=", self.fy_start_date),
                 ("company_id", "=", self.company_id.id),
@@ -318,6 +323,16 @@ class TrialBalanceReportWizard(models.TransientModel):
             []
         )
 
+        # Débitos y créditos del período
+        range_group = self.env["account.move.line"].read_group(
+            domain_range,
+            ["debit", "credit"],
+            []
+        )
+
+        debit = range_group[0]["debit"] if range_group else 0.0
+        credit = range_group[0]["credit"] if range_group else 0.0
+
         initial_debit = initial_group[0]["debit"] if initial_group else 0.0
         initial_credit = initial_group[0]["credit"] if initial_group else 0.0
         initial_balance = initial_debit - initial_credit
@@ -328,8 +343,8 @@ class TrialBalanceReportWizard(models.TransientModel):
 
         return {
             "initial_balance": initial_balance - 0.02,
-            "debit": 0.0,
-            "credit": 0.0,
+            "debit": debit,
+            "credit": credit,
             "ending_balance": final_balance - 0.02,
         }
 
