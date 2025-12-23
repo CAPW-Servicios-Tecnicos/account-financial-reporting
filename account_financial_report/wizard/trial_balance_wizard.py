@@ -262,6 +262,11 @@ class TrialBalanceReportWizard(models.TransientModel):
             ("code", "in", ["330101", "3401"]),
         ])
 
+        accounts_range = self.env["account.account"].search([
+            ("company_id", "=", self.company_id.id),
+            ("code", "=", "330101"),
+        ])
+
         if not accounts:
             return {
                 "initial_balance": 0.0,
@@ -310,7 +315,7 @@ class TrialBalanceReportWizard(models.TransientModel):
             ("date", ">=", self.date_from),
             ("date", "<=", self.date_to),
             ("company_id", "=", self.company_id.id),
-            ("account_id", "in", accounts.ids),
+            ("account_id", "in", accounts_range.ids),
         ]
 
         if self.target_move == "posted":
